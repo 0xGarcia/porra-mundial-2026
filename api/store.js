@@ -30,12 +30,63 @@ export default async function handler(req, res) {
 
   if (req.method === "POST") {
     const { action, ...payload } = req.body;
+
+    // Verificar contraseña para acciones de admin
+    const adminActions = ["setResultGroup", "setResultMatch", "deleteUser"];
+    if (adminActions.includes(action)) {
+      const { adminPassword } = payload;
+      if (adminPassword !== process.env.ADMIN_PASSWORD) {
+        return res.status(401).json({ error: "Contraseña incorrecta" });
+      }
+    }
+
     const store = await getStore();
 
     if (action === "saveUser") {
       store.users[payload.name] = payload.pred;
     } else if (action === "deleteUser") {
       delete store.users[payload.name];
+    } else if (action === "setResultGroup") {
+      store.results.groups[payload.g] = payload.order;
+    } else if (action === "setResultMatch") {
+      store.results.bracket[payload.id] = payload.winner;
+    } else if (action === "checkAdmin") {
+      // Solo verificar contraseña, no hacer nada más
+      return res.status(200).json({ ok: true });
+    } else {
+      return res.status(400).json({ error: "Acción desconocida" });
+    }
+
+    await setStore(store);
+    return res.status(200).json({ ok: true });
+  }
+
+  return res.status(405).json({ error: "Método no permitido" });
+}
+
+export default async function handler(req, res) {
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  if (req.method === "OPTIONS") return res.status(200).end();
+
+  if (req.method === "GET") {
+    const store = await getStore();
+    return res.status(200).json(store);
+  }
+
+  if (req.method === "POST") {
+    const { action, ...payload } = req.body;
+    const store = await getStore();
+
+    if (action === "saveUser") {
+      store.users[payload.name] = payload.pred;
+    } else if (action === "deleteUser") {
+      delete store.users[payload.name];
+    } else if (action === "saveResults") {
+      // Guarda todos los resultados de una sola vez
+      store.results = payload.results;
     } else if (action === "setResultGroup") {
       store.results.groups[payload.g] = payload.order;
     } else if (action === "setResultMatch") {
