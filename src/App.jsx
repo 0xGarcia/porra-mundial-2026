@@ -68,29 +68,29 @@ const porraAbierta = () => new Date() < FECHA_CIERRE;
 // ─── PUNTUACIÓN POR DEFECTO ──────────────────────────────────────────────────
 const DEFAULT_PTS = {
   // Fase de grupos - partidos
-  g_signo: 0, g_dif: 0, g_exacto: 0, g_ajuste: 0,
+  g_signo: 3, g_dif: 2, g_exacto: 5, g_ajuste: 0,
   // Fase de grupos - posiciones
-  pos1: 0, pos2: 0, pos3: 0, pos4: 0,
+  pos1: 5, pos2: 4, pos3: 3, pos4: 2,
   // Clasificados
-  clasif16: 0, clasif8: 0, clasif4: 0, clasifsemi: 0, clasiffinal34: 0, clasiffinal: 0,
+  clasif16: 2, clasif8: 4, clasif4: 6, clasifsemi: 8, clasiffinal34: 10, clasiffinal: 12,
   // 16avos - partidos
-  r32_signo: 0, r32_dif: 0, r32_exacto: 0,
+  r32_signo: 4, r32_dif: 3, r32_exacto: 7,
   // Octavos - partidos
-  r16_signo: 0, r16_dif: 0, r16_exacto: 0,
+  r16_signo: 5, r16_dif: 4, r16_exacto: 9,
   // Cuartos - partidos
-  qf_signo: 0, qf_dif: 0, qf_exacto: 0,
+  qf_signo: 6, qf_dif: 5, qf_exacto: 11,
   // Semis - partidos
-  sf_signo: 0, sf_dif: 0, sf_exacto: 0,
+  sf_signo: 7, sf_dif: 6, sf_exacto: 13,
   // 3er y 4º puesto - partido
-  td_signo: 0, td_dif: 0, td_exacto: 0,
+  td_signo: 5, td_dif: 4, td_exacto: 9,
   // Final - partido
-  f_signo: 0, f_dif: 0, f_exacto: 0,
-  // Cuadro de honor
+  f_signo: 10, f_dif: 8, f_exacto: 18,
+  // Cuadro de honor (ya no se usa en UI pero se mantiene por compatibilidad)
   campeon: 0, subcampeon: 0, tercero: 0,
   // Bota de Oro / Plata / Bronce
-  bota_oro: 0, bota_plata: 0, bota_bronce: 0,
+  bota_oro: 15, bota_plata: 8, bota_bronce: 4,
   // Balón de Oro / Plata / Bronce
-  balon_oro: 0, balon_plata: 0, balon_bronce: 0,
+  balon_oro: 15, balon_plata: 8, balon_bronce: 4,
 };
 
 // ─── UTILIDADES DE GRUPOS ────────────────────────────────────────────────────
