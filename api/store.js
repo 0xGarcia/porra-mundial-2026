@@ -2,17 +2,18 @@
 // Usa el sistema de archivos temporal de Vercel + una variable de entorno
 // para guardar todos los datos de la porra en un único objeto JSON.
 
-import { kv } from "@vercel/kv";
+import { Redis } from "@upstash/redis";
 
+const redis = Redis.fromEnv();
 const KEY = "porra2026";
 
 async function getStore() {
-  const data = await kv.get(KEY);
+  const data = await redis.get(KEY);
   return data || { users: {}, results: { groups: {}, bracket: {} } };
 }
 
 async function setStore(data) {
-  await kv.set(KEY, data);
+  await redis.set(KEY, data);
 }
 
 export default async function handler(req, res) {
