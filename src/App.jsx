@@ -1,5 +1,103 @@
 import { useState, useEffect } from "react";
 
+// ─── CALENDARIO COMPLETO (hora España CEST = ET+6) ───────────────────────────
+const MATCH_DATES = {
+  // Grupo A
+  "México§Sudáfrica":           "2026-06-11",
+  "Corea del Sur§Rep. Checa":   "2026-06-12",
+  "Rep. Checa§Sudáfrica":       "2026-06-18",
+  "México§Corea del Sur":       "2026-06-19",
+  "Rep. Checa§México":          "2026-06-25",
+  "Sudáfrica§Corea del Sur":    "2026-06-25",
+  // Grupo B
+  "Canadá§Bosnia y Herz.":      "2026-06-12",
+  "Qatar§Suiza":                "2026-06-13",
+  "Suiza§Bosnia y Herz.":       "2026-06-18",
+  "Canadá§Qatar":               "2026-06-19",
+  "Suiza§Canadá":               "2026-06-24",
+  "Bosnia y Herz.§Qatar":       "2026-06-24",
+  // Grupo C
+  "Brasil§Marruecos":           "2026-06-13",
+  "Haití§Escocia":              "2026-06-13",
+  "Escocia§Marruecos":          "2026-06-19",
+  "Brasil§Haití":               "2026-06-20",
+  "Escocia§Brasil":             "2026-06-25",
+  "Marruecos§Haití":            "2026-06-26",
+  // Grupo D
+  "EE.UU.§Paraguay":            "2026-06-12",
+  "Australia§Turquía":          "2026-06-14",
+  "EE.UU.§Australia":           "2026-06-19",
+  "Turquía§Paraguay":           "2026-06-20",
+  "Turquía§EE.UU.":             "2026-06-26",
+  "Paraguay§Australia":         "2026-06-26",
+  // Grupo E
+  "Alemania§Curazao":           "2026-06-14",
+  "Costa de Marfil§Ecuador":    "2026-06-14",
+  "Alemania§Costa de Marfil":   "2026-06-20",
+  "Ecuador§Curazao":            "2026-06-20",
+  "Costa de Marfil§Alemania":   "2026-06-26",
+  "Curazao§Ecuador":            "2026-06-26",
+  // Grupo F
+  "Países Bajos§Japón":         "2026-06-14",
+  "Suecia§Túnez":               "2026-06-14",
+  "Países Bajos§Suecia":        "2026-06-20",
+  "Túnez§Japón":                "2026-06-21",
+  "Suecia§Países Bajos":        "2026-06-27",
+  "Túnez§Japón§j3":             "2026-06-27",
+  // Grupo G
+  "Bélgica§Egipto":             "2026-06-15",
+  "Irán§Nueva Zelanda":         "2026-06-15",
+  "Bélgica§Irán":               "2026-06-21",
+  "Nueva Zelanda§Egipto":       "2026-06-21",
+  "Irán§Bélgica":               "2026-06-27",
+  "Nueva Zelanda§Egipto§j3":    "2026-06-27",
+  // Grupo H
+  "España§Arabia Saudí":        "2026-06-15",
+  "Cabo Verde§Uruguay":         "2026-06-15",
+  "España§Cabo Verde":          "2026-06-21",
+  "Arabia Saudí§Uruguay":       "2026-06-22",
+  "Arabia Saudí§España":        "2026-06-27",
+  "Uruguay§Cabo Verde":         "2026-06-27",
+  // Grupo I
+  "Francia§Senegal":            "2026-06-16",
+  "Irak§Noruega":               "2026-06-16",
+  "Francia§Irak":               "2026-06-22",
+  "Senegal§Noruega":            "2026-06-22",
+  "Senegal§Francia":            "2026-06-26",
+  "Noruega§Irak":               "2026-06-27",
+  // Grupo J
+  "Argentina§Argelia":          "2026-06-16",
+  "Austria§Jordania":           "2026-06-17",
+  "Argentina§Austria":          "2026-06-22",
+  "Argelia§Jordania":           "2026-06-23",
+  "Argelia§Argentina":          "2026-06-26",
+  "Jordania§Austria":           "2026-06-27",
+  // Grupo K
+  "Portugal§RD Congo":          "2026-06-17",
+  "Uzbekistán§Colombia":        "2026-06-17",
+  "Portugal§Uzbekistán":        "2026-06-23",
+  "RD Congo§Colombia":          "2026-06-23",
+  "Uzbekistán§Portugal":        "2026-06-27",
+  "Colombia§RD Congo":          "2026-06-27",
+  // Grupo L
+  "Inglaterra§Croacia":         "2026-06-17",
+  "Ghana§Panamá":               "2026-06-17",
+  "Inglaterra§Ghana":           "2026-06-23",
+  "Croacia§Panamá":             "2026-06-23",
+  "Ghana§Inglaterra":           "2026-06-27",
+  "Panamá§Croacia":             "2026-06-27",
+};
+
+// Fecha de cada jornada de eliminatoria (aproximada por ronda)
+const ELIM_ROUND_DATES = {
+  R32:   ["2026-06-28","2026-06-29","2026-06-30","2026-07-01","2026-07-02","2026-07-03"],
+  R16:   ["2026-07-04","2026-07-05","2026-07-06","2026-07-07"],
+  QF:    ["2026-07-09","2026-07-10","2026-07-11"],
+  SF:    ["2026-07-14","2026-07-15"],
+  FINAL: ["2026-07-19"],
+  THIRD: ["2026-07-18"],
+};
+
 // ─── DATOS ───────────────────────────────────────────────────────────────────
 const GROUPS = {
   A: ["México","Sudáfrica","Corea del Sur","Rep. Checa"],
@@ -22,9 +120,9 @@ const GROUP_MATCHES = {
   B:[["Canadá","Bosnia y Herz.",1],["Qatar","Suiza",1],["Suiza","Bosnia y Herz.",2],["Canadá","Qatar",2],["Suiza","Canadá",3],["Bosnia y Herz.","Qatar",3]],
   C:[["Brasil","Marruecos",1],["Haití","Escocia",1],["Escocia","Marruecos",2],["Brasil","Haití",2],["Escocia","Brasil",3],["Marruecos","Haití",3]],
   D:[["EE.UU.","Paraguay",1],["Australia","Turquía",1],["EE.UU.","Australia",2],["Turquía","Paraguay",2],["Turquía","EE.UU.",3],["Paraguay","Australia",3]],
-  E:[["Alemania","Costa de Marfil",1],["Ecuador","Curazao",1],["Alemania","Ecuador",2],["Costa de Marfil","Curazao",2],["Costa de Marfil","Alemania",3],["Curazao","Ecuador",3]],
-  F:[["Países Bajos","Suecia",1],["Japón","Túnez",1],["Países Bajos","Japón",2],["Suecia","Túnez",2],["Suecia","Países Bajos",3],["Túnez","Japón",3]],
-  G:[["Bélgica","Irán",1],["Egipto","Nueva Zelanda",1],["Bélgica","Egipto",2],["Irán","Nueva Zelanda",2],["Irán","Bélgica",3],["Nueva Zelanda","Egipto",3]],
+  E:[["Alemania","Curazao",1],["Costa de Marfil","Ecuador",1],["Alemania","Costa de Marfil",2],["Ecuador","Curazao",2],["Costa de Marfil","Alemania",3],["Curazao","Ecuador",3]],
+  F:[["Países Bajos","Japón",1],["Suecia","Túnez",1],["Países Bajos","Suecia",2],["Japón","Túnez",2],["Suecia","Países Bajos",3],["Túnez","Japón",3]],
+  G:[["Bélgica","Egipto",1],["Irán","Nueva Zelanda",1],["Bélgica","Irán",2],["Nueva Zelanda","Egipto",2],["Irán","Bélgica",3],["Nueva Zelanda","Egipto",3]],
   H:[["España","Arabia Saudí",1],["Cabo Verde","Uruguay",1],["España","Cabo Verde",2],["Arabia Saudí","Uruguay",2],["Arabia Saudí","España",3],["Uruguay","Cabo Verde",3]],
   I:[["Francia","Senegal",1],["Irak","Noruega",1],["Francia","Irak",2],["Senegal","Noruega",2],["Senegal","Francia",3],["Noruega","Irak",3]],
   J:[["Argentina","Argelia",1],["Austria","Jordania",1],["Argentina","Austria",2],["Argelia","Jordania",2],["Argelia","Argentina",3],["Jordania","Austria",3]],
@@ -150,44 +248,271 @@ export default function App() {
   return <HomeScreen store={store} onEnter={n=>go("predict",n)} onRanking={()=>go("ranking")} onAdmin={()=>go("admin")} />;
 }
 
-// ─── HOME ─────────────────────────────────────────────────────────────────────
+// ─── HOME — DASHBOARD ────────────────────────────────────────────────────────
 function HomeScreen({store,onEnter,onRanking,onAdmin}){
   const [name,setName]=useState("");
-  const count=Object.keys(store.users).length;
   const abierta=porraAbierta();
+  const pts=store.results?.pts||DEFAULT_PTS;
+
+  // Calcular puntuaciones por día para todos los usuarios
+  const allScores=Object.entries(store.users).map(([n,pred])=>({
+    name:n,
+    total:Math.round(calcPoints(pred,store.results,pts)*10)/10,
+    done:pred.done,
+  })).sort((a,b)=>b.total-a.total);
+
+  // Obtener los días únicos que tienen partidos jugados (con resultado en admin)
+  const matchDays = getMatchDays(store.results);
+  const today = new Date().toISOString().slice(0,10);
+  const lastDay = matchDays[matchDays.length-1] || today;
+
+  // Puntos ganados el último día con partidos
+  const pointsOnDay = (userName, day) => {
+    const pred = store.users[userName];
+    if(!pred) return 0;
+    const resultsUntilDay = filterResultsByDate(store.results, day);
+    const resultsBefore   = filterResultsByDate(store.results, getPrevDay(day, matchDays));
+    const totalToday  = calcPoints(pred, resultsUntilDay, pts);
+    const totalBefore = calcPoints(pred, resultsBefore, pts);
+    return Math.round((totalToday - totalBefore)*10)/10;
+  };
+
+  // Serie temporal para el gráfico
+  const chartDays = matchDays.slice(-14); // últimos 14 días con partidos
+  const chartData = chartDays.map(day => {
+    const entry = {day: day.slice(5)}; // MM-DD
+    Object.entries(store.users).forEach(([n,pred])=>{
+      const r = filterResultsByDate(store.results, day);
+      entry[n] = Math.round(calcPoints(pred,r,pts)*10)/10;
+    });
+    return entry;
+  });
+
+  const COLORS = ["#3b82f6","#f59e0b","#22c55e","#ef4444","#a78bfa","#f97316","#06b6d4","#ec4899"];
+
   return(
     <div style={S.page}>
-      <div style={{textAlign:"center",marginBottom:24}}>
-        <div style={{fontSize:56}}>🏆</div>
+      {/* HEADER */}
+      <div style={{textAlign:"center",marginBottom:20}}>
+        <div style={{fontSize:48}}>🏆</div>
         <h1 style={S.title}>Porra Mundial 2026</h1>
-        <p style={{color:"#94a3b8",margin:"4px 0"}}>USA · México · Canadá</p>
-        <p style={{color:"#64748b",fontSize:13}}>11 Jun – 19 Jul 2026</p>
-        {count>0&&<p style={{color:"#22c55e",fontSize:13,marginTop:8}}>👥 {count} participante{count!==1?"s":""}</p>}
+        <p style={{color:"#94a3b8",margin:"2px 0",fontSize:13}}>USA · México · Canadá · 11 Jun – 19 Jul 2026</p>
       </div>
-      <div style={S.card}>
+
+      {/* ENTRAR */}
+      <div style={{...S.card,maxWidth:420}}>
         {abierta?(
           <>
-            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>¿Cuál es tu nombre?</p>
+            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0,marginBottom:8}}>¿Cuál es tu nombre?</p>
             <input style={S.input} placeholder="Tu nombre..." value={name} onChange={e=>setName(e.target.value)} onKeyDown={e=>e.key==="Enter"&&name.trim()&&onEnter(name.trim())}/>
             <Btn onClick={()=>name.trim()&&onEnter(name.trim())}>Entrar a mi porra →</Btn>
           </>
         ):(
           <>
-            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>¿Cuál es tu nombre?</p>
+            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0,marginBottom:8}}>Ver mi porra</p>
             <input style={S.input} placeholder="Tu nombre..." value={name} onChange={e=>setName(e.target.value)}/>
-            <div style={{background:"#7f1d1d",border:"1px solid #ef4444",borderRadius:10,padding:"12px",textAlign:"center"}}>
-              <p style={{color:"#fca5a5",fontWeight:700,margin:0}}>🔒 Porra cerrada</p>
-              <p style={{color:"#f87171",fontSize:13,margin:"4px 0 0"}}>Plazo terminado el 11 de junio a las 19:00h</p>
+            <div style={{background:"#7f1d1d",border:"1px solid #ef4444",borderRadius:10,padding:"10px",textAlign:"center",marginBottom:8}}>
+              <p style={{color:"#fca5a5",fontWeight:700,margin:0,fontSize:13}}>🔒 Plazo cerrado — 11 jun 19:00h</p>
             </div>
           </>
         )}
+        <div style={{display:"flex",gap:8,marginTop:4}}>
+          <Btn secondary onClick={onAdmin} style={{fontSize:12}}>⚙️ Admin</Btn>
+          <Btn secondary onClick={onRanking} style={{fontSize:12}}>📊 Clasificación completa</Btn>
+        </div>
       </div>
-      <div style={{display:"flex",gap:10,marginTop:4}}>
-        <Btn secondary onClick={onRanking}>🏅 Clasificación</Btn>
-        <Btn secondary onClick={onAdmin}>⚙️ Admin</Btn>
-      </div>
+
+      {allScores.length > 0 && (<>
+
+        {/* PUNTUACIÓN ÚLTIMO DÍA */}
+        {matchDays.length > 0 && (
+          <div style={{width:"100%",maxWidth:480,marginTop:8}}>
+            <div style={{fontWeight:700,color:"#60a5fa",fontSize:13,marginBottom:8}}>
+              ⚡ Puntos del {lastDay.slice(8)}/{lastDay.slice(5,7)} (último día con partidos)
+            </div>
+            <div style={{display:"flex",flexDirection:"column",gap:6}}>
+              {[...allScores].sort((a,b)=>pointsOnDay(b.name,lastDay)-pointsOnDay(a.name,lastDay)).map((s,i)=>{
+                const dayPts = pointsOnDay(s.name, lastDay);
+                return(
+                  <div key={s.name} style={{...S.card,display:"flex",alignItems:"center",gap:10,padding:"10px 14px",marginBottom:0,
+                    background:i===0&&dayPts>0?"#1e3a5f":"#1e293b",
+                    border:"1px solid "+(i===0&&dayPts>0?"#3b82f6":"#334155")}}>
+                    <span style={{fontSize:16}}>{i===0&&dayPts>0?"🔥":`${i+1}.`}</span>
+                    <span style={{flex:1,fontWeight:600,color:"#e2e8f0",fontSize:13}}>{s.name}</span>
+                    <span style={{fontWeight:700,color:dayPts>0?"#22c55e":"#64748b",fontSize:16}}>
+                      {dayPts>0?`+${dayPts}`:"0"} pts
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* TABLA CLASIFICACIÓN TOTAL */}
+        <div style={{width:"100%",maxWidth:480,marginTop:16}}>
+          <div style={{fontWeight:700,color:"#60a5fa",fontSize:13,marginBottom:8}}>🏅 Clasificación total</div>
+          <div style={{background:"#1e293b",borderRadius:12,overflow:"hidden",border:"1px solid #334155"}}>
+            <div style={{display:"grid",gridTemplateColumns:"28px 1fr 70px 70px",padding:"8px 14px",background:"#0f172a",fontSize:11,color:"#64748b",fontWeight:700}}>
+              <span>#</span><span>Participante</span><span style={{textAlign:"right"}}>Puntos</span><span style={{textAlign:"right"}}>Ayer</span>
+            </div>
+            {allScores.map((s,i)=>{
+              const dayPts = matchDays.length>0 ? pointsOnDay(s.name,lastDay) : 0;
+              const medal = i===0?"🥇":i===1?"🥈":i===2?"🥉":null;
+              return(
+                <div key={s.name} style={{display:"grid",gridTemplateColumns:"28px 1fr 70px 70px",padding:"10px 14px",
+                  borderTop:"1px solid #334155",
+                  background:i===0?"#1e3a5f":i===1?"#1c2e1c":i===2?"#2d1e0a":"#1e293b"}}>
+                  <span style={{fontSize:14}}>{medal||`${i+1}`}</span>
+                  <span style={{fontWeight:600,color:"#e2e8f0",fontSize:13}}>{s.name}</span>
+                  <span style={{fontWeight:700,color:"#fbbf24",fontSize:15,textAlign:"right"}}>{s.total}</span>
+                  <span style={{color:dayPts>0?"#22c55e":"#64748b",fontSize:12,textAlign:"right",fontWeight:dayPts>0?600:400}}>
+                    {dayPts>0?`+${dayPts}`:"-"}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* GRÁFICO EVOLUCIÓN */}
+        {chartDays.length > 1 && (
+          <div style={{width:"100%",maxWidth:480,marginTop:16}}>
+            <div style={{fontWeight:700,color:"#60a5fa",fontSize:13,marginBottom:8}}>📈 Evolución de puntuaciones</div>
+            <div style={{background:"#1e293b",borderRadius:12,padding:"12px",border:"1px solid #334155"}}>
+              <MiniChart data={chartData} users={allScores.map(s=>s.name)} colors={COLORS}/>
+            </div>
+          </div>
+        )}
+
+      </>)}
     </div>
   );
+}
+
+// ─── MINI CHART (SVG puro, sin librerías) ────────────────────────────────────
+function MiniChart({data, users, colors}){
+  if(!data||data.length<2) return null;
+  const W=440, H=180, PL=28, PR=8, PT=10, PB=28;
+  const iW=W-PL-PR, iH=H-PT-PB;
+
+  // Solo días donde al menos un usuario tiene puntos distintos al día anterior
+  const activeDays = data.filter((d,i)=>{
+    if(i===0) return users.some(u=>(d[u]||0)>0);
+    return users.some(u=>(d[u]||0)!==(data[i-1][u]||0));
+  });
+
+  if(activeDays.length<2) return(
+    <p style={{color:"#64748b",fontSize:12,textAlign:"center",padding:"20px 0"}}>
+      El gráfico aparecerá cuando haya resultados en al menos 2 días distintos
+    </p>
+  );
+
+  let minV=0, maxV=0;
+  activeDays.forEach(d=>{ users.forEach(u=>{ if(d[u]!=null){ minV=Math.min(minV,d[u]); maxV=Math.max(maxV,d[u]); }}); });
+  if(maxV===minV) maxV=minV+10;
+
+  const xScale = i => PL + (i/(activeDays.length-1))*iW;
+  const yScale = v => PT + iH - ((v-minV)/(maxV-minV))*iH;
+
+  const gridVals=[0,0.25,0.5,0.75,1].map(t=>Math.round(minV+(maxV-minV)*t));
+
+  return(
+    <svg viewBox={`0 0 ${W} ${H}`} style={{width:"100%",height:"auto"}}>
+      {/* Grid lines */}
+      {gridVals.map((val,i)=>{
+        const y=yScale(val);
+        return(<g key={i}>
+          <line x1={PL} x2={W-PR} y1={y} y2={y} stroke="#334155" strokeWidth="0.5" strokeDasharray="3,3"/>
+          <text x={PL-4} y={y+3} fill="#475569" fontSize="8" textAnchor="end">{val}</text>
+        </g>);
+      })}
+      {/* Lines per user */}
+      {users.map((u,ui)=>{
+        const pts=activeDays.map((d,i)=>({x:xScale(i),y:yScale(d[u]||0)}));
+        const path=pts.map((p,i)=>`${i===0?"M":"L"}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+        return(<g key={u}>
+          <path d={path} fill="none" stroke={colors[ui%colors.length]} strokeWidth="2" strokeLinejoin="round" strokeLinecap="round"/>
+          {pts.map((p,i)=>(
+            <circle key={i} cx={p.x} cy={p.y} r="3" fill={colors[ui%colors.length]} stroke="#0f172a" strokeWidth="1"/>
+          ))}
+        </g>);
+      })}
+      {/* X axis — solo días activos */}
+      {activeDays.map((d,i)=>(
+        <text key={i} x={xScale(i)} y={H-6} textAnchor="middle" fill="#64748b" fontSize="8">{d.day}</text>
+      ))}
+      {/* Legend */}
+      {users.map((u,ui)=>{
+        const cols=Math.ceil(users.length/2);
+        const col=ui%cols, row=Math.floor(ui/cols);
+        return(
+          <g key={u} transform={`translate(${PL + col*(iW/cols)},${H-18+row*10})`}>
+            <rect width="8" height="3" y="4" fill={colors[ui%colors.length]} rx="1"/>
+            <text x="11" y="9" fill="#94a3b8" fontSize="8">{u.length>9?u.slice(0,8)+"…":u}</text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+// ─── HELPERS DE FECHAS ────────────────────────────────────────────────────────
+function getMatchDays(results){
+  if(!results?.groups) return [];
+  const days=new Set();
+  Object.entries(results.groups).forEach(([key,sc])=>{
+    if(sc.h!==""&&sc.a!==""&&sc.h!=null&&sc.a!=null){
+      const cleanKey=key.replace(/§j\d+$/,"");
+      const d=MATCH_DATES[key]||MATCH_DATES[cleanKey];
+      if(d) days.add(d);
+    }
+  });
+  Object.entries(results.bracket||{}).forEach(([pid,winner])=>{
+    if(winner){
+      const idx=ALL_ELIM.indexOf(pid);
+      let d=null;
+      if(idx<16) d=ELIM_ROUND_DATES.R32[Math.floor(idx/3)]||ELIM_ROUND_DATES.R32[0];
+      else if(idx<24) d=ELIM_ROUND_DATES.R16[Math.floor((idx-16)/2)]||ELIM_ROUND_DATES.R16[0];
+      else if(idx<28) d=ELIM_ROUND_DATES.QF[Math.floor((idx-24))]||ELIM_ROUND_DATES.QF[0];
+      else if(idx<30) d=ELIM_ROUND_DATES.SF[idx-28]||ELIM_ROUND_DATES.SF[0];
+      else if(idx===30) d=ELIM_ROUND_DATES.FINAL[0];
+      else d=ELIM_ROUND_DATES.THIRD[0];
+      if(d) days.add(d);
+    }
+  });
+  return [...days].sort();
+}
+
+function getPrevDay(day, matchDays){
+  const idx=matchDays.indexOf(day);
+  return idx>0?matchDays[idx-1]:null;
+}
+
+function filterResultsByDate(results, upToDate){
+  if(!upToDate||!results) return {groups:{},groupStandings:{},bracket:{},pts:results?.pts||DEFAULT_PTS,bonus:results?.bonus||{}};
+  const groups={};
+  Object.entries(results.groups||{}).forEach(([key,sc])=>{
+    const cleanKey=key.replace(/§j\d+$/,"");
+    const d=MATCH_DATES[key]||MATCH_DATES[cleanKey];
+    if(d&&d<=upToDate) groups[key]=sc;
+  });
+  // Recalcular standings hasta esa fecha
+  const tempStandings=calcStandings(groups);
+  const groupStandings=Object.fromEntries(Object.keys(GROUPS).map(g=>[g,sortGroup(g,tempStandings)]));
+  const bracket={};
+  Object.entries(results.bracket||{}).forEach(([pid,winner])=>{
+    const idx=ALL_ELIM.indexOf(pid);
+    let d=null;
+    if(idx<16) d=ELIM_ROUND_DATES.R32[Math.floor(idx/3)]||ELIM_ROUND_DATES.R32[0];
+    else if(idx<24) d=ELIM_ROUND_DATES.R16[Math.floor((idx-16)/2)]||ELIM_ROUND_DATES.R16[0];
+    else if(idx<28) d=ELIM_ROUND_DATES.QF[idx-24]||ELIM_ROUND_DATES.QF[0];
+    else if(idx<30) d=ELIM_ROUND_DATES.SF[idx-28]||ELIM_ROUND_DATES.SF[0];
+    else if(idx===30) d=ELIM_ROUND_DATES.FINAL[0];
+    else d=ELIM_ROUND_DATES.THIRD[0];
+    if(d&&d<=upToDate) bracket[pid]=winner;
+  });
+  return {groups,groupStandings,bracket,pts:results.pts||DEFAULT_PTS,bonus:results.bonus||{}};
 }
 
 // ─── PREDICT SCREEN ───────────────────────────────────────────────────────────
