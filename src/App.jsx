@@ -1,4 +1,4 @@
-import { useState, useEffect, useReducer } from "react";
+import { useState, useEffect } from "react";
 
 // ─── DATA ────────────────────────────────────────────────────────────────────
 const GROUPS = {
@@ -16,6 +16,12 @@ const GROUPS = {
   L: ["Inglaterra","Croacia","Ghana","Panamá"],
 };
 const ALL_TEAMS = Object.values(GROUPS).flat();
+
+// ─── FECHA DE CIERRE ──────────────────────────────────────────────────────────
+// 11 de junio de 2026 a las 19:00h España (UTC+2 en verano = 17:00 UTC)
+const FECHA_CIERRE = new Date("2026-06-11T17:00:00Z");
+const porraAbierta = () => new Date() < FECHA_CIERRE;
+
 const FLAG = {"México":"🇲🇽","Sudáfrica":"🇿🇦","Corea del Sur":"🇰🇷","Rep. Checa":"🇨🇿","Canadá":"🇨🇦","Bosnia y Herz.":"🇧🇦","Qatar":"🇶🇦","Suiza":"🇨🇭","Brasil":"🇧🇷","Marruecos":"🇲🇦","Haití":"🇭🇹","Escocia":"🏴󠁧󠁢󠁳󠁣󠁴󠁿","EE.UU.":"🇺🇸","Paraguay":"🇵🇾","Australia":"🇦🇺","Turquía":"🇹🇷","Alemania":"🇩🇪","Curazao":"🇨🇼","Costa de Marfil":"🇨🇮","Ecuador":"🇪🇨","Países Bajos":"🇳🇱","Japón":"🇯🇵","Suecia":"🇸🇪","Túnez":"🇹🇳","Bélgica":"🇧🇪","Egipto":"🇪🇬","Irán":"🇮🇷","Nueva Zelanda":"🇳🇿","España":"🇪🇸","Cabo Verde":"🇨🇻","Arabia Saudí":"🇸🇦","Uruguay":"🇺🇾","Francia":"🇫🇷","Senegal":"🇸🇳","Irak":"🇮🇶","Noruega":"🇳🇴","Argentina":"🇦🇷","Argelia":"🇩🇿","Austria":"🇦🇹","Jordania":"🇯🇴","Portugal":"🇵🇹","RD Congo":"🇨🇩","Uzbekistán":"🇺🇿","Colombia":"🇨🇴","Inglaterra":"🏴󠁧󠁢󠁥󠁮󠁧󠁿","Croacia":"🇭🇷","Ghana":"🇬🇭","Panamá":"🇵🇦"};
 const tf = t => (FLAG[t]||"🏳️")+" "+t;
 
@@ -50,7 +56,7 @@ QF_PAIRS.forEach(([id])=>{  ROUND_PTS[`P${id}`]=PTS.qf; });
 SF_PAIRS.forEach(([id])=>{  ROUND_PTS[`P${id}`]=PTS.sf; });
 ROUND_PTS[`P${FINAL_ID}`]=PTS.final;
 
-// ─── API HELPERS ─────────────────────────────────────────────────────────────
+// ─── API ─────────────────────────────────────────────────────────────────────
 async function apiGet(path) {
   const r = await fetch(`/api/${path}`);
   if (!r.ok) throw new Error(await r.text());
@@ -58,9 +64,7 @@ async function apiGet(path) {
 }
 async function apiPost(path, body) {
   const r = await fetch(`/api/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
+    method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(body),
   });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
@@ -68,7 +72,7 @@ async function apiPost(path, body) {
 
 // ─── ROOT ─────────────────────────────────────────────────────────────────────
 export default function App() {
-  const [store, setStore] = useState({ users: {}, results: { groups: {}, bracket: {} } });
+  const [store, setStore] = useState({users:{},results:{groups:{},bracket:{}}});
   const [loading, setLoading] = useState(true);
   const [screen, setScreen] = useState("home");
   const [activeUser, setActiveUser] = useState(null);
@@ -79,29 +83,17 @@ export default function App() {
     finally { setLoading(false); }
   };
 
-  useEffect(() => { fetchStore(); }, []);
+  useEffect(()=>{ fetchStore(); },[]);
 
-  const saveUser = async (name, pred) => {
-    await apiPost("store", { action: "saveUser", name, pred });
-    await fetchStore();
-  };
-  const deleteUser = async (name) => {
-    await apiPost("store", { action: "deleteUser", name });
-    await fetchStore();
-  };
-  const saveResultGroup = async (g, order) => {
-    await apiPost("store", { action: "setResultGroup", g, order });
-    await fetchStore();
-  };
-  const saveResultMatch = async (id, winner) => {
-    await apiPost("store", { action: "setResultMatch", id, winner });
-    await fetchStore();
-  };
+  const saveUser        = async (name,pred) => { await apiPost("store",{action:"saveUser",name,pred}); await fetchStore(); };
+  const deleteUser      = async (name)      => { await apiPost("store",{action:"deleteUser",name}); await fetchStore(); };
+  const saveResultGroup = async (g,order)   => { await apiPost("store",{action:"setResultGroup",g,order}); await fetchStore(); };
+  const saveResultMatch = async (id,winner) => { await apiPost("store",{action:"setResultMatch",id,winner}); await fetchStore(); };
 
-  const go = (s, user = null) => { setScreen(s); if (user !== undefined) setActiveUser(user); };
+  const go = (s,user=null) => { setScreen(s); if(user!==undefined) setActiveUser(user); };
 
   if (loading) return (
-    <div style={{...S.page, justifyContent:"center"}}>
+    <div style={{...S.page,justifyContent:"center"}}>
       <div style={{fontSize:48}}>⚽</div>
       <p style={{color:"#94a3b8",marginTop:12}}>Cargando porra...</p>
     </div>
@@ -118,6 +110,8 @@ export default function App() {
 function HomeScreen({ store, onEnter, onRanking, onAdmin }) {
   const [name, setName] = useState("");
   const count = Object.keys(store.users).length;
+  const abierta = porraAbierta();
+
   return (
     <div style={S.page}>
       <div style={{textAlign:"center",marginBottom:28}}>
@@ -127,13 +121,29 @@ function HomeScreen({ store, onEnter, onRanking, onAdmin }) {
         <p style={{color:"#64748b",fontSize:13}}>11 Jun – 19 Jul 2026</p>
         {count>0 && <p style={{color:"#22c55e",fontSize:13,marginTop:8}}>👥 {count} participante{count!==1?"s":""} registrado{count!==1?"s":""}</p>}
       </div>
+
       <div style={S.card}>
-        <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>¿Cuál es tu nombre?</p>
-        <input style={S.input} placeholder="Tu nombre..." value={name}
-          onChange={e=>setName(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&name.trim()&&onEnter(name.trim())} />
-        <Btn onClick={()=>name.trim()&&onEnter(name.trim())}>Entrar a mi porra →</Btn>
+        {abierta ? (
+          <>
+            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>¿Cuál es tu nombre?</p>
+            <input style={S.input} placeholder="Tu nombre..." value={name}
+              onChange={e=>setName(e.target.value)}
+              onKeyDown={e=>e.key==="Enter"&&name.trim()&&onEnter(name.trim())} />
+            <Btn onClick={()=>name.trim()&&onEnter(name.trim())}>Entrar a mi porra →</Btn>
+          </>
+        ) : (
+          <>
+            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>¿Cuál es tu nombre?</p>
+            <input style={S.input} placeholder="Tu nombre..." value={name}
+              onChange={e=>setName(e.target.value)} />
+            <div style={{background:"#7f1d1d",border:"1px solid #ef4444",borderRadius:10,padding:"12px 16px",textAlign:"center"}}>
+              <p style={{color:"#fca5a5",fontWeight:700,margin:0}}>🔒 Porra cerrada</p>
+              <p style={{color:"#f87171",fontSize:13,margin:"4px 0 0"}}>El plazo terminó el 11 de junio a las 19:00h</p>
+            </div>
+          </>
+        )}
       </div>
+
       <div style={{display:"flex",gap:10,marginTop:4}}>
         <Btn secondary onClick={onRanking}>🏅 Clasificación</Btn>
         <Btn secondary onClick={onAdmin}>⚙️ Admin</Btn>
@@ -145,8 +155,8 @@ function HomeScreen({ store, onEnter, onRanking, onAdmin }) {
 // ─── PREDICT ─────────────────────────────────────────────────────────────────
 function PredictScreen({ user, store, saveUser, onBack, onDone }) {
   const existing = store.users[user];
-  const [step, setStep] = useState(0);
-  const [grps, setGrps]    = useState(existing?.groups  || Object.fromEntries(Object.entries(GROUPS).map(([k,v])=>[k,[...v]])));
+  const [step, setStep]     = useState(0);
+  const [grps, setGrps]     = useState(existing?.groups || Object.fromEntries(Object.entries(GROUPS).map(([k,v])=>[k,[...v]])));
   const [thirds, setThirds] = useState(existing?.thirds || []);
   const [bracket, setBracket] = useState(existing?.bracket || {});
   const [saving, setSaving] = useState(false);
@@ -157,12 +167,14 @@ function PredictScreen({ user, store, saveUser, onBack, onDone }) {
     if (slot.pos===3) { const m=thirds.find(t=>{const e=myThirds.find(x=>x.team===t); return e&&slot.pool?.includes(e.group);}); return m||null; }
     return grps[slot.g]?.[slot.pos-1]||null;
   };
-  const getTeams = m => ({ a: resolveSlot(m.a), b: resolveSlot(m.b) });
+  const getTeams = m => ({a:resolveSlot(m.a),b:resolveSlot(m.b)});
 
   const doSave = async (done=false) => {
+    if (!porraAbierta()) { alert("La porra está cerrada. Ya no se pueden hacer cambios."); return false; }
     setSaving(true);
-    await saveUser(user, { groups:grps, thirds, bracket, done });
+    await saveUser(user,{groups:grps,thirds,bracket,done});
     setSaving(false);
+    return true;
   };
 
   if (step===0) return (
@@ -174,7 +186,7 @@ function PredictScreen({ user, store, saveUser, onBack, onDone }) {
           <GroupEditor key={g} letter={g} teams={teams} onChange={t=>setGrps(p=>({...p,[g]:t}))} />
         ))}
       </div>
-      <Btn onClick={async()=>{await doSave();setStep(1);}} style={{marginTop:20,maxWidth:400}} disabled={saving}>
+      <Btn onClick={async()=>{ const ok=await doSave(); if(ok) setStep(1); }} style={{marginTop:20,maxWidth:400}} disabled={saving}>
         {saving?"Guardando...":"Siguiente: mejores terceros →"}
       </Btn>
     </div>
@@ -201,7 +213,7 @@ function PredictScreen({ user, store, saveUser, onBack, onDone }) {
         })}
       </div>
       <p style={{color:thirds.length===8?"#22c55e":"#f59e0b",fontWeight:600,marginTop:10}}>{thirds.length}/8 seleccionados</p>
-      <Btn onClick={async()=>{await doSave();setStep(2);}} disabled={thirds.length!==8||saving} style={{maxWidth:380}}>
+      <Btn onClick={async()=>{ const ok=await doSave(); if(ok) setStep(2); }} disabled={thirds.length!==8||saving} style={{maxWidth:380}}>
         {saving?"Guardando...":"Siguiente: rellenar bracket →"}
       </Btn>
     </div>
@@ -211,7 +223,7 @@ function PredictScreen({ user, store, saveUser, onBack, onDone }) {
     <BracketEditor resolveSlot={resolveSlot} getTeams={getTeams}
       bracket={bracket} setBracket={setBracket}
       onBack={()=>setStep(1)}
-      onDone={async()=>{await doSave(true);setStep(3);}}
+      onDone={async()=>{ const ok=await doSave(true); if(ok) setStep(3); }}
       saving={saving}
     />
   );
@@ -227,7 +239,7 @@ function PredictScreen({ user, store, saveUser, onBack, onDone }) {
         {champion&&<p style={{fontSize:22,margin:"12px 0 0"}}>{FLAG[champion]||"🏆"} <strong style={{color:"#fbbf24"}}>{champion}</strong></p>}
       </div>
       <div style={{display:"flex",gap:10,marginTop:10}}>
-        <Btn secondary onClick={()=>setStep(0)}>✏️ Editar</Btn>
+        {porraAbierta() && <Btn secondary onClick={()=>setStep(0)}>✏️ Editar</Btn>}
         <Btn onClick={onDone}>Ver clasificación</Btn>
       </div>
     </div>
@@ -257,16 +269,13 @@ function GroupEditor({ letter, teams, onChange }) {
 function BracketEditor({ resolveSlot, getTeams, bracket, setBracket, onBack, onDone, saving }) {
   const [rnd, setRnd] = useState(0);
   const pick=(id,team)=>{ if(team) setBracket(p=>({...p,[id]:team})); };
-
   const buildMatches=()=>{
     if(rnd===0) return R32.map(m=>({id:m.id,...getTeams(m)}));
     const pairs=[R16_PAIRS,QF_PAIRS,SF_PAIRS,[[FINAL_ID,[SF_PAIRS[0][0],SF_PAIRS[1][0]]]]];
     return pairs[rnd-1].map(([id,[p1,p2]])=>({id:`P${id}`,a:bracket[`P${p1}`]||null,b:bracket[`P${p2}`]||null}));
   };
-
   const matches=buildMatches();
   const complete=matches.every(m=>bracket[m.id]);
-
   return (
     <div style={S.page}>
       <TopBar title={`Bracket — ${ROUNDS[rnd]}`} onBack={rnd===0?onBack:()=>setRnd(r=>r-1)} />
@@ -346,10 +355,50 @@ function RankingScreen({ store, onBack }) {
 
 // ─── ADMIN ────────────────────────────────────────────────────────────────────
 function AdminScreen({ store, saveResultGroup, saveResultMatch, deleteUser, onBack }) {
-  const [auth, setAuth] = useState(false);
-  const [pass, setPass] = useState("");
-  const [tab, setTab]   = useState("users");
+  const [auth, setAuth]   = useState(false);
+  const [pass, setPass]   = useState("");
+  const [tab, setTab]     = useState("users");
   const [saving, setSaving] = useState(false);
+
+  // Local draft state para grupos y bracket (no se guarda hasta pulsar "Guardar")
+  const [draftGroups,  setDraftGroups]  = useState(()=> Object.fromEntries(Object.entries(GROUPS).map(([g,t])=>[g,[...(store.results.groups[g]||t)]])));
+  const [draftBracket, setDraftBracket] = useState(()=>({...store.results.bracket}));
+  const [dirty, setDirty] = useState(false);
+
+  const moveGroup = (g,i,d) => {
+    const t=[...draftGroups[g]], j=i+d;
+    if(j<0||j>=t.length) return;
+    [t[i],t[j]]=[t[j],t[i]];
+    setDraftGroups(p=>({...p,[g]:t}));
+    setDirty(true);
+  };
+  const pickMatch = (pid, val) => {
+    setDraftBracket(p=>({...p,[pid]:val}));
+    setDirty(true);
+  };
+
+  const guardarResultados = async () => {
+    setSaving(true);
+    for (const [g,order] of Object.entries(draftGroups)) await saveResultGroup(g, order);
+    for (const [pid,winner] of Object.entries(draftBracket)) if(winner) await saveResultMatch(pid, winner);
+    setDirty(false);
+    setSaving(false);
+    alert("✅ Resultados guardados correctamente");
+  };
+
+  const resetearTodo = async () => {
+    if (!window.confirm("⚠️ ¿Resetear TODOS los resultados a cero? Esto no se puede deshacer.")) return;
+    setSaving(true);
+    const emptyGroups = Object.fromEntries(Object.entries(GROUPS).map(([g,t])=>[g,[...t]]));
+    for (const [g,order] of Object.entries(emptyGroups)) await saveResultGroup(g, order);
+    const allMatchIds = [...R32.map(m=>m.id),...R16_PAIRS.map(([id])=>`P${id}`),...QF_PAIRS.map(([id])=>`P${id}`),...SF_PAIRS.map(([id])=>`P${id}`),`P${FINAL_ID}`];
+    for (const pid of allMatchIds) await saveResultMatch(pid, "");
+    setDraftGroups(emptyGroups);
+    setDraftBracket({});
+    setDirty(false);
+    setSaving(false);
+    alert("✅ Resultados reseteados a cero");
+  };
 
   if (!auth) return (
     <div style={S.page}>
@@ -358,9 +407,8 @@ function AdminScreen({ store, saveResultGroup, saveResultMatch, deleteUser, onBa
         <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0}}>Contraseña de administrador</p>
         <input type="password" style={S.input} placeholder="Contraseña..." value={pass}
           onChange={e=>setPass(e.target.value)}
-          onKeyDown={e=>e.key==="Enter"&&(pass==="admin2026"?setAuth(true):alert("Contraseña incorrecta"))} />
+          onKeyDown={e=>{ if(e.key==="Enter") { if(pass==="admin2026") setAuth(true); else alert("Contraseña incorrecta"); }}} />
         <Btn onClick={()=>pass==="admin2026"?setAuth(true):alert("Contraseña incorrecta")}>Entrar</Btn>
-        <p style={{color:"#475569",fontSize:12,marginBottom:0}}>Contraseña: <code>admin2026</code></p>
       </div>
     </div>
   );
@@ -368,6 +416,7 @@ function AdminScreen({ store, saveResultGroup, saveResultMatch, deleteUser, onBa
   return (
     <div style={S.page}>
       <TopBar title="⚙️ Resultados Reales" onBack={onBack} />
+
       <div style={{display:"flex",gap:8,marginBottom:16,flexWrap:"wrap"}}>
         {["users","groups","bracket"].map(t=>(
           <Btn key={t} secondary onClick={()=>setTab(t)} style={{background:tab===t?"#1d4ed8":"#1e293b",color:"#e2e8f0"}}>
@@ -401,27 +450,23 @@ function AdminScreen({ store, saveResultGroup, saveResultMatch, deleteUser, onBa
       )}
 
       {tab==="groups"&&(
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,width:"100%",maxWidth:620}}>
-          {Object.entries(GROUPS).map(([g,teams])=>{
-            const cur=store.results.groups[g]||[...teams];
-            const move=async(i,d)=>{
-              const t=[...cur],j=i+d; if(j<0||j>=t.length)return; [t[i],t[j]]=[t[j],t[i]];
-              setSaving(true); await saveResultGroup(g,t); setSaving(false);
-            };
-            return (
+        <div style={{width:"100%",maxWidth:620}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:16}}>
+            {Object.entries(draftGroups).map(([g,cur])=>(
               <div key={g} style={{background:"#1e293b",borderRadius:10,padding:10,border:"1px solid #f59e0b33"}}>
                 <div style={{fontWeight:700,color:"#f59e0b",marginBottom:8,fontSize:13}}>Grupo {g} — Real</div>
                 {cur.map((team,i)=>(
                   <div key={team} style={{display:"flex",alignItems:"center",gap:5,marginBottom:5}}>
                     <span style={{fontSize:11,color:"#f59e0b",width:14,textAlign:"right"}}>{i+1}º</span>
                     <span style={{flex:1,fontSize:12,color:"#e2e8f0"}}>{tf(team)}</span>
-                    <button style={S.arrow} onClick={()=>move(i,-1)} disabled={i===0||saving}>↑</button>
-                    <button style={S.arrow} onClick={()=>move(i,1)} disabled={i===cur.length-1||saving}>↓</button>
+                    <button style={S.arrow} onClick={()=>moveGroup(g,i,-1)} disabled={i===0}>↑</button>
+                    <button style={S.arrow} onClick={()=>moveGroup(g,i,1)} disabled={i===cur.length-1}>↓</button>
                   </div>
                 ))}
               </div>
-            );
-          })}
+            ))}
+          </div>
+          <SaveBar dirty={dirty} saving={saving} onSave={guardarResultados} onReset={resetearTodo} />
         </div>
       )}
 
@@ -433,16 +478,35 @@ function AdminScreen({ store, saveResultGroup, saveResultMatch, deleteUser, onBa
             return (
               <div key={pid} style={{background:"#1e293b",borderRadius:8,padding:10,marginBottom:6,border:"1px solid #334155"}}>
                 <p style={{color:"#475569",fontSize:10,margin:"0 0 5px"}}>{round} · {pid}</p>
-                <select style={{...S.input,marginBottom:0,padding:"8px 10px"}} value={store.results.bracket[pid]||""}
-                  onChange={async e=>{ setSaving(true); await saveResultMatch(pid,e.target.value); setSaving(false); }}>
+                <select style={{...S.input,marginBottom:0,padding:"8px 10px"}} value={draftBracket[pid]||""}
+                  onChange={e=>pickMatch(pid,e.target.value)}>
                   <option value="">-- Ganador --</option>
                   {ALL_TEAMS.map(t=><option key={t} value={t}>{tf(t)}</option>)}
                 </select>
               </div>
             );
           })}
+          <SaveBar dirty={dirty} saving={saving} onSave={guardarResultados} onReset={resetearTodo} />
         </div>
       )}
+    </div>
+  );
+}
+
+function SaveBar({ dirty, saving, onSave, onReset }) {
+  return (
+    <div style={{position:"sticky",bottom:16,display:"flex",gap:10,marginTop:16}}>
+      <button onClick={onReset} disabled={saving}
+        style={{padding:"11px 16px",borderRadius:10,fontWeight:700,fontSize:13,cursor:"pointer",
+          background:"#7f1d1d",border:"1px solid #ef4444",color:"#fca5a5",flexShrink:0}}>
+        🔄 Resetear todo
+      </button>
+      <button onClick={onSave} disabled={!dirty||saving}
+        style={{flex:1,padding:"11px 16px",borderRadius:10,fontWeight:700,fontSize:14,cursor:(!dirty||saving)?"not-allowed":"pointer",
+          opacity:(!dirty||saving)?0.4:1,
+          background:"linear-gradient(135deg,#065f46,#047857)",border:"none",color:"#fff"}}>
+        {saving?"Guardando...":"💾 Guardar resultados"}
+      </button>
     </div>
   );
 }
