@@ -956,11 +956,27 @@ function AdminScreen({store,saveResults,deleteUser,onBack}){
   const setBonus=(pid,v)=>{ setDraft(p=>({...p,bonus:{...p.bonus,[pid]:parseInt(v)||1}})); setDirty(true); };
   const setBracketWinner=(pid,v)=>{ setDraft(p=>({...p,bracket:{...p.bracket,[pid]:v}})); setDirty(true); };
 
-  const guardar=async()=>{ setSaving(true); await saveResults({...draft,groupStandings:realSorted}); setDirty(false); setSaving(false); alert("✅ Guardado"); };
+  const guardar=async()=>{
+    setSaving(true);
+    // Una sola llamada con todo el estado
+    const resultsToSave={
+      ...draft,
+      groupStandings: realSorted,
+    };
+    await saveResults(resultsToSave);
+    setDirty(false);
+    setSaving(false);
+    alert("✅ Guardado");
+  };
   const resetear=async()=>{
     if(!window.confirm("¿Resetear todo?")) return;
     const empty={groups:{},groupStandings:{},bracket:{},pts:DEFAULT_PTS,bonus:{}};
-    setSaving(true); await saveResults(empty); setDraft(empty); setDirty(false); setSaving(false); alert("✅ Reseteado");
+    setSaving(true);
+    await saveResults(empty);
+    setDraft(empty);
+    setDirty(false);
+    setSaving(false);
+    alert("✅ Reseteado");
   };
 
   if(!auth) return(
