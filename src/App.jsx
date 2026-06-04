@@ -198,7 +198,7 @@ function PredictScreen({user,store,saveUser,onBack,onDone}){
   const [thirds,setThirds]=useState(existing?.thirds||[]);
   const [bracket,setBracket]=useState(existing?.bracket||{});
   const [elimScores,setElimScores]=useState(existing?.elimScores||{});
-  const [honor,setHonor]=useState(existing?.honor||{camp:"",sub:"",ter:"",cuar:""});
+  const [honor,setHonor]=useState(existing?.honor||{bota_oro:"",bota_plata:"",bota_bronce:"",balon_oro:"",balon_plata:"",balon_bronce:""});
   const [saving,setSaving]=useState(false);
 
   const standings=calcStandings(scores);
@@ -235,7 +235,8 @@ function PredictScreen({user,store,saveUser,onBack,onDone}){
         <div style={{fontSize:48}}>✅</div>
         <h2 style={{color:"#22c55e",margin:"8px 0"}}>¡Porra guardada!</h2>
         <p style={{color:"#94a3b8",margin:0}}>{user}, tu predicción está lista.</p>
-        {honor.camp&&<p style={{fontSize:20,margin:"12px 0 0"}}>{FLAG[honor.camp]||"🏆"} <strong style={{color:"#fbbf24"}}>{honor.camp}</strong></p>}
+        {honor.bota_oro&&<p style={{fontSize:14,margin:"12px 0 4px",color:"#f59e0b"}}>👟 Bota de Oro: <strong>{honor.bota_oro}</strong></p>}
+        {honor.balon_oro&&<p style={{fontSize:14,margin:"4px 0 0",color:"#60a5fa"}}>⚽ Balón de Oro: <strong>{honor.balon_oro}</strong></p>}
       </div>
       <div style={{display:"flex",gap:10,marginTop:10}}>
         {porraAbierta()&&<Btn secondary onClick={()=>setStep(0)}>✏️ Editar</Btn>}
@@ -490,31 +491,54 @@ function EliminatoriaStep({sortedGroups,thirds,myThirds,resolveSlot,getTeams,bra
   );
 }
 
-// ─── PASO 3: CUADRO DE HONOR ──────────────────────────────────────────────────
+// ─── PASO 3: BOTA Y BALÓN DE ORO ─────────────────────────────────────────────
 function HonorStep({honor,setHonor,onBack,onDone,saving}){
   const set=(k,v)=>setHonor(p=>({...p,[k]:v}));
-  const items=[
-    {key:"camp",label:"🥇 Campeón"},
-    {key:"sub",label:"🥈 Subcampeón"},
-    {key:"ter",label:"🥉 3er puesto"},
-    {key:"cuar",label:"4️⃣ 4º puesto"},
+
+  // Lista de todos los jugadores conocidos por selección (simplificado — nombre libre)
+  const sections=[
+    {
+      title:"👟 Bota de Oro — Máximo goleador",
+      color:"#f59e0b",
+      items:[
+        {key:"bota_oro",label:"🥇 Bota de Oro"},
+        {key:"bota_plata",label:"🥈 Bota de Plata"},
+        {key:"bota_bronce",label:"🥉 Bota de Bronce"},
+      ]
+    },
+    {
+      title:"⚽ Balón de Oro — Mejor jugador",
+      color:"#60a5fa",
+      items:[
+        {key:"balon_oro",label:"🥇 Balón de Oro"},
+        {key:"balon_plata",label:"🥈 Balón de Plata"},
+        {key:"balon_bronce",label:"🥉 Balón de Bronce"},
+      ]
+    },
   ];
+
   return(
     <div style={S.page}>
-      <TopBar title="Cuadro de Honor" onBack={onBack}/>
-      <p style={{color:"#94a3b8",fontSize:13,marginBottom:16}}>¿Quién acabará en cada posición?</p>
-      <div style={{display:"flex",flexDirection:"column",gap:12,width:"100%",maxWidth:380}}>
-        {items.map(({key,label})=>(
-          <div key={key} style={S.card}>
-            <p style={{fontWeight:600,color:"#e2e8f0",marginTop:0,marginBottom:8}}>{label}</p>
-            <select style={{...S.input,marginBottom:0}} value={honor[key]||""} onChange={e=>set(key,e.target.value)}>
-              <option value="">-- Seleccionar --</option>
-              {ALL_TEAMS.map(t=><option key={t} value={t}>{tf(t)}</option>)}
-            </select>
+      <TopBar title="Bota y Balón de Oro" onBack={onBack}/>
+      <p style={{color:"#94a3b8",fontSize:13,marginBottom:20,textAlign:"center"}}>Escribe el nombre del jugador que crees que ganará cada premio</p>
+      <div style={{display:"flex",flexDirection:"column",gap:16,width:"100%",maxWidth:400}}>
+        {sections.map(({title,color,items})=>(
+          <div key={title}>
+            <div style={{fontWeight:700,color,fontSize:13,marginBottom:8,padding:"6px 12px",background:"#1e293b",borderRadius:8,border:`1px solid ${color}33`}}>
+              {title}
+            </div>
+            {items.map(({key,label})=>(
+              <div key={key} style={{background:"#1e293b",borderRadius:8,padding:"10px 12px",marginBottom:8,border:"1px solid #334155"}}>
+                <p style={{color:"#e2e8f0",fontSize:12,fontWeight:600,margin:"0 0 6px"}}>{label}</p>
+                <input style={{...S.input,marginBottom:0}} placeholder="Nombre del jugador..."
+                  value={honor[key]||""} onChange={e=>set(key,e.target.value)}/>
+              </div>
+            ))}
           </div>
         ))}
       </div>
-      <Btn onClick={onDone} disabled={saving} style={{marginTop:16,maxWidth:380}}>
+      <p style={{color:"#475569",fontSize:11,marginTop:8,textAlign:"center"}}>Puedes dejar en blanco los premios que no quieras predecir</p>
+      <Btn onClick={onDone} disabled={saving} style={{marginTop:16,maxWidth:400}}>
         {saving?"Guardando...":"💾 Guardar porra ✅"}
       </Btn>
     </div>
