@@ -197,6 +197,7 @@ function PredictScreen({user,store,saveUser,onBack,onDone}){
   const [scores,setScores]=useState(existing?.scores||{});
   const [thirds,setThirds]=useState(existing?.thirds||[]);
   const [bracket,setBracket]=useState(existing?.bracket||{});
+  const [elimScores,setElimScores]=useState(existing?.elimScores||{});
   const [honor,setHonor]=useState(existing?.honor||{camp:"",sub:"",ter:"",cuar:""});
   const [saving,setSaving]=useState(false);
 
@@ -217,14 +218,14 @@ function PredictScreen({user,store,saveUser,onBack,onDone}){
   const doSave=async(done=false)=>{
     if(!porraAbierta()){alert("La porra está cerrada.");return false;}
     setSaving(true);
-    await saveUser(user,{scores,thirds,bracket,honor,done});
+    await saveUser(user,{scores,thirds,bracket,elimScores,honor,done});
     setSaving(false);
     return true;
   };
 
   if(step===0) return <GroupsStep user={user} scores={scores} setScores={setScores} sortedGroups={sortedGroups} standings={standings} onBack={onBack} onNext={async()=>{const ok=await doSave();if(ok)setStep(1);}} saving={saving}/>;
   if(step===1) return <ThirdsStep myThirds={myThirds} thirds={thirds} setThirds={setThirds} onBack={()=>setStep(0)} onNext={async()=>{const ok=await doSave();if(ok)setStep(2);}} saving={saving}/>;
-  if(step===2) return <EliminatoriaStep sortedGroups={sortedGroups} thirds={thirds} myThirds={myThirds} resolveSlot={resolveSlot} getTeams={getTeams} bracket={bracket} setBracket={setBracket} onBack={()=>setStep(1)} onNext={async()=>{const ok=await doSave();if(ok)setStep(3);}} saving={saving}/>;
+  if(step===2) return <EliminatoriaStep sortedGroups={sortedGroups} thirds={thirds} myThirds={myThirds} resolveSlot={resolveSlot} getTeams={getTeams} bracket={bracket} setBracket={setBracket} elimScores={elimScores} setElimScores={setElimScores} onBack={()=>setStep(1)} onNext={async()=>{const ok=await doSave();if(ok)setStep(3);}} saving={saving}/>;
   if(step===3) return <HonorStep honor={honor} setHonor={setHonor} onBack={()=>setStep(2)} onDone={async()=>{const ok=await doSave(true);if(ok)setStep(4);}} saving={saving}/>;
 
   return(
@@ -354,9 +355,11 @@ function ThirdsStep({myThirds,thirds,setThirds,onBack,onNext,saving}){
 }
 
 // ─── PASO 2: ELIMINATORIA ─────────────────────────────────────────────────────
-function EliminatoriaStep({sortedGroups,thirds,myThirds,resolveSlot,getTeams,bracket,setBracket,onBack,onNext,saving}){
+function EliminatoriaStep({sortedGroups,thirds,myThirds,resolveSlot,getTeams,bracket,setBracket,elimScores,setElimScores,onBack,onNext,saving}){
   const [rnd,setRnd]=useState(0);
-  const pick=(id,team)=>{ if(team) setBracket(p=>({...p,[id]:team})); };
+
+  const setScore=(id,side,val)=>setElimScores(p=>({...p,[id]:{...(p[id]||{}),[side]:val}}));
+  const setPens=(id,side,val)=>setElimScores(p=>({...p,[id]:{...(p[id]||{}),pens:{...(p[id]?.pens||{}),[side]:val}}}));
 
   const buildMatches=()=>{
     if(rnd===0) return R32.map(m=>({id:m.id,...getTeams(m)}));
@@ -364,7 +367,68 @@ function EliminatoriaStep({sortedGroups,thirds,myThirds,resolveSlot,getTeams,bra
     return pairs[rnd-1].map(([id,[p1,p2]])=>({id:`P${id}`,a:bracket[`P${p1}`]||null,b:bracket[`P${p2}`]||null}));
   };
   const matches=buildMatches();
-  const complete=matches.every(m=>bracket[m.id]);
+
+  // Un partido está completo si tiene ganador (que se deduce del marcador o penaltis)
+  const isMatchComplete=(m)=>{
+    const sc=elimScores[m.id]||{};
+    if(sc.h===""||sc.a===""||sc.h==null||sc.a==null) return false;
+    const h=parseInt(sc.h), a=parseInt(sc.a);
+    if(isNaN(h)||isNaN(a)) return false;
+    if(h===a){
+      // empate — necesita penaltis para definir ganador
+      return sc.pens?.h!=null&&sc.pens?.a!=null&&sc.pens.h!==""&&sc.pens.a!==""&&parseInt(sc.pens.h)!==parseInt(sc.pens.a);
+    }
+    return true;
+  };
+
+  // Derivar ganador del marcador
+  const getWinner=(id,teamA,teamB)=>{
+    const sc=elimScores[id]||{};
+    if(sc.h===""||sc.a===""||sc.h==null||sc.a==null) return null;
+    const h=parseInt(sc.h), a=parseInt(sc.a);
+    if(isNaN(h)||isNaN(a)) return null;
+    if(h>a) return teamA;
+    if(a>h) return teamB;
+    // empate: penaltis
+    const ph=parseInt(sc.pens?.h), pa=parseInt(sc.pens?.a);
+    if(isNaN(ph)||isNaN(pa)||ph===pa) return null;
+    return ph>pa?teamA:teamB;
+  };
+
+  // Actualizar bracket automáticamente cuando se completa un marcador
+  const handleScoreChange=(id,side,val,teamA,teamB)=>{
+    setScore(id,side,val);
+    // recalcular ganador tras el cambio
+    setTimeout(()=>{
+      setElimScores(prev=>{
+        const sc={...(prev[id]||{}),[side]:val};
+        const h=parseInt(sc.h), a=parseInt(sc.a);
+        if(!isNaN(h)&&!isNaN(a)&&h!==a){
+          const winner=h>a?teamA:teamB;
+          setBracket(pb=>({...pb,[id]:winner}));
+        }
+        return {...prev,[id]:sc};
+      });
+    },0);
+  };
+
+  const handlePensChange=(id,side,val,teamA,teamB)=>{
+    setPens(id,side,val);
+    setTimeout(()=>{
+      setElimScores(prev=>{
+        const sc=prev[id]||{};
+        const pens={...(sc.pens||{}),[side]:val};
+        const ph=parseInt(pens.h), pa=parseInt(pens.a);
+        if(!isNaN(ph)&&!isNaN(pa)&&ph!==pa){
+          const winner=ph>pa?teamA:teamB;
+          setBracket(pb=>({...pb,[id]:winner}));
+        }
+        return {...prev,[id]:{...sc,pens}};
+      });
+    },0);
+  };
+
+  const complete=matches.every(m=>isMatchComplete(m));
 
   return(
     <div style={S.page}>
@@ -378,26 +442,48 @@ function EliminatoriaStep({sortedGroups,thirds,myThirds,resolveSlot,getTeams,bra
           </span>
         ))}
       </div>
-      <div style={{display:"flex",flexDirection:"column",gap:8,width:"100%",maxWidth:400}}>
-        {matches.map(m=>(
-          <div key={m.id} style={{background:"#1e293b",borderRadius:10,padding:10,border:"1px solid #334155"}}>
-            <p style={{color:"#475569",fontSize:10,margin:"0 0 6px"}}>{m.id}</p>
-            <div style={{display:"flex",gap:6}}>
-              {[m.a,m.b].map((t,si)=>(
-                <button key={si} disabled={!t} onClick={()=>pick(m.id,t)}
-                  style={{flex:1,padding:"9px 6px",borderRadius:8,fontSize:12,fontWeight:bracket[m.id]===t?700:400,
-                    border:"2px solid "+(bracket[m.id]===t?"#3b82f6":"#334155"),
-                    background:bracket[m.id]===t?"#1d4ed8":"#0f172a",
-                    color:t?"#e2e8f0":"#475569",cursor:t?"pointer":"default"}}>
-                  {t?tf(t):<span style={{fontSize:11,color:"#334155"}}>Por definir</span>}
-                </button>
-              ))}
+      <p style={{color:"#64748b",fontSize:11,marginBottom:12,textAlign:"center"}}>Introduce el marcador al final del tiempo reglamentario. Si hay empate, aparecerán los campos de penaltis.</p>
+      <div style={{display:"flex",flexDirection:"column",gap:10,width:"100%",maxWidth:440}}>
+        {matches.map(m=>{
+          const sc=elimScores[m.id]||{};
+          const h=parseInt(sc.h), a=parseInt(sc.a);
+          const isEmpatado=!isNaN(h)&&!isNaN(a)&&h===a;
+          const winner=getWinner(m.id,m.a,m.b);
+          return(
+            <div key={m.id} style={{background:"#1e293b",borderRadius:10,padding:12,border:"1px solid "+(winner?"#10b981":"#334155")}}>
+              <p style={{color:"#475569",fontSize:10,margin:"0 0 8px"}}>{m.id}</p>
+              {/* Marcador principal */}
+              <div style={{display:"flex",alignItems:"center",gap:6}}>
+                <span style={{flex:1,fontSize:12,color:winner===m.a?"#22c55e":"#e2e8f0",fontWeight:winner===m.a?700:400,textAlign:"right"}}>{m.a?tf(m.a):<span style={{color:"#334155"}}>Por definir</span>}</span>
+                <input type="number" min="0" max="20" value={sc.h??""} onChange={e=>handleScoreChange(m.id,"h",e.target.value,m.a,m.b)} disabled={!m.a||!m.b} style={{...S.scoreInput}}/>
+                <span style={{color:"#64748b",fontSize:13,fontWeight:700}}>-</span>
+                <input type="number" min="0" max="20" value={sc.a??""} onChange={e=>handleScoreChange(m.id,"a",e.target.value,m.a,m.b)} disabled={!m.a||!m.b} style={{...S.scoreInput}}/>
+                <span style={{flex:1,fontSize:12,color:winner===m.b?"#22c55e":"#e2e8f0",fontWeight:winner===m.b?700:400}}>{m.b?tf(m.b):<span style={{color:"#334155"}}>Por definir</span>}</span>
+              </div>
+              {/* Penaltis — solo si empate */}
+              {isEmpatado&&(
+                <div style={{marginTop:8,padding:"8px 10px",background:"#0f172a",borderRadius:8,border:"1px solid #7c3aed"}}>
+                  <p style={{color:"#a78bfa",fontSize:10,margin:"0 0 6px",textAlign:"center",fontWeight:600}}>🎯 Penaltis</p>
+                  <div style={{display:"flex",alignItems:"center",gap:6,justifyContent:"center"}}>
+                    <span style={{fontSize:11,color:parseInt(sc.pens?.h)>parseInt(sc.pens?.a)?"#22c55e":"#94a3b8",flex:1,textAlign:"right"}}>{m.a?FLAG[m.a]:"?"}</span>
+                    <input type="number" min="0" max="20" value={sc.pens?.h??""} onChange={e=>handlePensChange(m.id,"h",e.target.value,m.a,m.b)} style={{...S.scoreInput,borderColor:"#7c3aed"}}/>
+                    <span style={{color:"#64748b",fontSize:12}}>-</span>
+                    <input type="number" min="0" max="20" value={sc.pens?.a??""} onChange={e=>handlePensChange(m.id,"a",e.target.value,m.a,m.b)} style={{...S.scoreInput,borderColor:"#7c3aed"}}/>
+                    <span style={{fontSize:11,color:parseInt(sc.pens?.a)>parseInt(sc.pens?.h)?"#22c55e":"#94a3b8",flex:1}}>{m.b?FLAG[m.b]:"?"}</span>
+                  </div>
+                  {sc.pens?.h!=null&&sc.pens?.a!=null&&parseInt(sc.pens.h)===parseInt(sc.pens.a)&&
+                    <p style={{color:"#ef4444",fontSize:10,textAlign:"center",margin:"4px 0 0"}}>Los penaltis no pueden empatar</p>
+                  }
+                </div>
+              )}
+              {/* Ganador */}
+              {winner&&<p style={{color:"#22c55e",fontSize:11,textAlign:"center",margin:"6px 0 0",fontWeight:600}}>✓ Pasa: {tf(winner)}</p>}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
-      {!complete&&<p style={{color:"#f59e0b",fontSize:12,marginTop:8}}>Selecciona todos los ganadores para continuar</p>}
-      <Btn onClick={rnd===4?onNext:()=>setRnd(r=>r+1)} disabled={(!complete&&rnd<4)||saving} style={{marginTop:12,maxWidth:400}}>
+      {!complete&&<p style={{color:"#f59e0b",fontSize:12,marginTop:8}}>Completa todos los marcadores para continuar</p>}
+      <Btn onClick={rnd===4?onNext:()=>setRnd(r=>r+1)} disabled={!complete||saving} style={{marginTop:12,maxWidth:440}}>
         {saving?"Guardando...":(rnd===4?"Siguiente: cuadro de honor →":`Siguiente: ${ROUNDS[rnd+1]} →`)}
       </Btn>
     </div>
